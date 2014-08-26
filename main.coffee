@@ -126,22 +126,20 @@ drawCard = ->
         bmp.x = cardDrawX #+ bmp.regX
         bmp.y = 470 + bmp.regY
         
-        bmp.on("click", (evt) ->
-                evt.stopPropagation()
-                if evt.nativeEvent.button == 0 && Math.sqrt(Math.pow(@dragStart.x - evt.stageX, 2) + Math.pow(@dragStart.y - evt.stageY, 2)) < 3
+        bmp.on("pressup", (evt) ->
+                if Math.sqrt(Math.pow(@dragStart.x - evt.stageX, 2) + Math.pow(@dragStart.y - evt.stageY, 2)) < 3
                         console.log(evt)
                         @rotation = (@rotation + 90) % 180
         )
-        bmp.on(click(), (evt) ->
-                if evt.nativeEvent.button == 0
-                        console.log(evt)
-                        @parent.addChild(@)
-                        @offset =
-                                x: @x - evt.stageX
-                                y: @y - evt.stageY
-                        @dragStart =
-                                x: evt.stageX
-                                y: evt.stageY
+        bmp.on("mousedown", (evt) ->
+                console.log(evt)
+                @parent.addChild(@)
+                @offset =
+                        x: @x - evt.stageX
+                        y: @y - evt.stageY
+                @dragStart =
+                        x: evt.stageX
+                        y: evt.stageY
         )
         bmp.on("pressmove", (evt) ->
                 @x = evt.stageX + @offset.x
@@ -173,13 +171,10 @@ untapAll = ->
         for o in stage.children
                 o.rotation = 0 if o.rotation?
 
-click = ->
-        if createjs.Touch.isSupported()
-                "press"
-        else
-                "click"
-
 init = (canvas) ->
+        if createjs.Touch.isSupported()
+                alert("HOGE")
+
         deck = parseMWDeck(mwdeck)
         shuffle(deck)
 
@@ -208,7 +203,7 @@ init = (canvas) ->
                 else
                         new createjs.Shape(new createjs.Graphics().beginFill("red").rect(10, 470, cardWidth, cardHeight))
         
-        deckImg.addEventListener(click(), (evt) ->
+        deckImg.addEventListener("mousedown", (evt) ->
                 console.log(evt)
                 drawCard()
         )
