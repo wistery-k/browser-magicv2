@@ -132,7 +132,7 @@ drawCard = ->
                         console.log(evt)
                         @rotation = (@rotation + 90) % 180
         )
-        bmp.on("mousedown", (evt) ->
+        bmp.on(click(), (evt) ->
                 if evt.nativeEvent.button == 0
                         console.log(evt)
                         @parent.addChild(@)
@@ -173,6 +173,12 @@ untapAll = ->
         for o in stage.children
                 o.rotation = 0 if o.rotation?
 
+click = ->
+        if createjs.Touch.isSupported()
+                "press"
+        else
+                "click"
+
 init = (canvas) ->
         deck = parseMWDeck(mwdeck)
         shuffle(deck)
@@ -189,9 +195,6 @@ init = (canvas) ->
 
         table.addChild(new createjs.Shape(new createjs.Graphics().beginFill("rgb(222,222,222)").rect(0, 0, canvas.width, canvas.height)))
         table.addChild(new createjs.Shape(new createjs.Graphics().beginStroke("rgb(111,111,111)", 0, 460, canvas.width)))
-        table.on("click", (evt) ->
-                console.log("table")
-        )
 
         deckImg =
                 if !NO_INTERNET
@@ -204,22 +207,10 @@ init = (canvas) ->
                         bmp
                 else
                         new createjs.Shape(new createjs.Graphics().beginFill("red").rect(10, 470, cardWidth, cardHeight))
-                        
-        deckImg.addEventListener("click", (evt) ->
+        
+        deckImg.addEventListener(click(), (evt) ->
                 console.log(evt)
-                if evt.nativeEvent.button == 0
-                        drawCard()
-                else
-                        ###
-                        contextMenu = new ContextMenu(["Draw", "Show"], self.x + x + 10, self.y + y + 10)
-                        contextMenu.addEventListener("click", (self, index) ->
-                                if index == 0
-                                        drawCard()
-                                if index == 1
-                                        showDeck()
-                        )
-                        CanvasW.showContextMenu(contextMenu)
-                        ###
+                drawCard()
         )
         table.addChild(deckImg)
 
