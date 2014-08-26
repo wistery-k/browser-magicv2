@@ -322,8 +322,4 @@ window.addEventListener("load", ->
         ctx = canvas.getContext("2d")
 
         init(canvas)
-
-        if not ("first_time" of localStorage)
-                alert("README: Ctrl+Shift+J")
-                localStorage.setItem("first_time", "")
 , false)
