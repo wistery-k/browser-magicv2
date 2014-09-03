@@ -1,3 +1,9 @@
+# package import
+Shape = createjs.Shape
+Graphics = createjs.Graphics
+Container = createjs.Container
+Stage = createjs.Stage
+
 cardWidth = 81
 cardHeight = 113
 
@@ -94,12 +100,87 @@ shuffle = (deck) ->
 stage = null
 deck = null
 table = null
+contextMenu = null
 
 randomColor = ->
         r = ~~(Math.random() * 256)
         g = ~~(Math.random() * 256)
         b = ~~(Math.random() * 256)
         return "rgb(#{r},#{g},#{b})"
+
+setClickListeners = (target, onClick, onRightClick) ->
+        if not createjs.Touch.isSupported()
+                target.on("mousedown", (evt) ->
+                        if evt.nativeEvent.button == 0
+                                onClick(evt)
+                        else if evt.nativeEvent.button == 2
+                                onRightClick(evt)
+                )
+        else
+                target.on("mousedown", (evt) ->
+                        @rightClicked = false
+                        @timerID = setInterval(() =>
+                                @rightClicked = true
+                                clearInterval(@timerID)
+                                onRightClick(evt)                                
+                        , 500)
+                )
+                target.on("pressup", (evt) ->
+                        if not @rightClicked
+                                clearInterval(@timerID)
+                                onClick(evt)
+                )
+
+makeContextMenu = (menuList, onClickListener) ->
+        c = new createjs.Container()
+        bg = new Shape(new Graphics().beginFill("rgb(240,240,240)").rect(0,0,180, 28 * menuList.length))
+        bg.shadow = new createjs.Shadow(4, "gray", 4, 4)
+        c.addChild(bg)
+
+        for menu, i  in menuList
+                r = new Shape(new Graphics().beginFill("rgb(240,240,240)").rect(0, 0,180, 28))
+                r.x = 0
+                r.y = i * 28
+                c.addChild(r)                
+                t = new createjs.Text(menu, "bold 24px Arial", "black")
+                t.x = 0
+                t.y = i * 28
+                c.addChild(t)
+                onMouseOver = do (r, t) -> (evt) ->
+                        r.graphics.clear().beginFill("rgb(39,23,88)").rect(0, 0, 180, 28)
+                        t.color = "white"
+                r.on("mouseover", onMouseOver)
+                t.on("mouseover", onMouseOver)
+                onMouseOut = do (r, t) -> (evt) ->
+                                r.graphics.clear().beginFill("rgb(240,240,240)").rect(0, 0, 180, 28)
+                                t.color = "black"
+                r.on("mouseout", onMouseOut)
+                t.on("mouseout", onMouseOut)
+                onMouseDown = do (i) -> (evt) -> onClickListener(i)
+                r.on("mousedown", onMouseDown)
+                t.on("mousedown", onMouseDown)
+
+        return c
+
+showContextMenu = (x, y, menuList, onClickListener) ->
+        contextMenu = makeContextMenu(menuList, onClickListener)
+        contextMenu.x = x
+        contextMenu.y = y        
+                
+        dummy = new Shape(new Graphics().beginFill("rgba(0,0,0,0.01)").rect(0,0,1200,800))
+
+        removeContextMenu = (evt) ->
+                console.log("hoge")
+                if contextMenu?
+                        stage.removeChild(contextMenu)
+                        stage.removeChild(dummy)
+                        contextMenu = null
+
+        contextMenu.addEventListener("mousedown", removeContextMenu)
+        dummy.addEventListener("mousedown", removeContextMenu)
+
+        stage.addChild(dummy)
+        stage.addChild(contextMenu)
 
 addCardToField = (bmp) ->
         bmp.on("pressup", (evt) ->
@@ -142,7 +223,7 @@ drawCard = ->
                         bmp = new createjs.Bitmap(img)
                         bmp
                 else
-                        new createjs.Shape(new createjs.Graphics().beginFill(randomColor()).rect(0, 0, cardWidth, cardHeight))
+                        new Shape(new Graphics().beginFill(randomColor()).rect(0, 0, cardWidth, cardHeight))
 
         bmp.regX = cardWidth / 2 #
         bmp.regY = cardHeight / 2 #
@@ -159,13 +240,13 @@ showDeck = ->
         layer.x = margin
         layer.y = margin
         
-        box = new createjs.Shape(new createjs.Graphics().beginFill("rgb(188,188,188)").rect(0, 0, w, h))
+        box = new Shape(new Graphics().beginFill("rgb(188,188,188)").rect(0, 0, w, h))
         box.shadow = new createjs.Shadow("black", 5, 5, 10)
         layer.addChild(box)
         
-        layer.addChild(new createjs.Shape(new createjs.Graphics().beginFill("rgb(128,128,128)").rect(0, 0, w, 30)))
-        layer.addChild(new createjs.Shape(new createjs.Graphics().setStrokeStyle(6).beginStroke("rgb(64,64,64)").moveTo(w-20, 5).lineTo(w-5, 20)))
-        layer.addChild(new createjs.Shape(new createjs.Graphics().setStrokeStyle(6).beginStroke("rgb(64,64,64)").moveTo(w-20, 20).lineTo(w-5, 5)))
+        layer.addChild(new Shape(new Graphics().beginFill("rgb(128,128,128)").rect(0, 0, w, 30)))
+        layer.addChild(new Shape(new Graphics().setStrokeStyle(6).beginStroke("rgb(64,64,64)").moveTo(w-20, 5).lineTo(w-5, 20)))
+        layer.addChild(new Shape(new Graphics().setStrokeStyle(6).beginStroke("rgb(64,64,64)").moveTo(w-20, 20).lineTo(w-5, 5)))
 
         row = ~~((w - padding - cardWidth) / cardWidth) #
         num_row = ~~(deck.length / row) + 1 #
@@ -217,8 +298,6 @@ untapAll = ->
                 o.rotation = 0 if o.rotation?
 
 init = (canvas) ->
-        if createjs.Touch.isSupported()
-                alert("HOGE")
 
         deck = parseMWDeck(mwdeck)
         shuffle(deck)
@@ -228,20 +307,21 @@ init = (canvas) ->
                 return false
 
         stage = new createjs.Stage(canvas)
+        stage.enableMouseOver(100)
         createjs.Touch.enable(stage)
 
         table = new createjs.Container()
         stage.addChild(table)
 
-        table.addChild(new createjs.Shape(new createjs.Graphics().beginFill("rgb(222,222,222)").rect(0, 0, canvas.width, canvas.height)))
-        handBorder1 = new createjs.Shape(new createjs.Graphics().beginStroke("rgb(111,111,111)").moveTo(10, 140).lineTo(850, 140))
+        table.addChild(new Shape(new Graphics().beginFill("rgb(222,222,222)").rect(0, 0, canvas.width, canvas.height)))
+        handBorder1 = new Shape(new Graphics().beginStroke("rgb(111,111,111)").moveTo(10, 140).lineTo(850, 140))
         handBorder1.shadow = new createjs.Shadow("black",1,5,5) 
         table.addChild(handBorder1)
-        table.addChild(new createjs.Shape(new createjs.Graphics().beginStroke("rgb(111,111,111)").moveTo(10, 400).lineTo(850, 400)))
-        handBorder2 = new createjs.Shape(new createjs.Graphics().beginStroke("rgb(111,111,111)").moveTo(10, 660).lineTo(850, 660))
+        table.addChild(new Shape(new Graphics().beginStroke("rgb(111,111,111)").moveTo(10, 400).lineTo(850, 400)))
+        handBorder2 = new Shape(new Graphics().beginStroke("rgb(111,111,111)").moveTo(10, 660).lineTo(850, 660))
         handBorder2.shadow = new createjs.Shadow("black",1,-5,5)
         table.addChild(handBorder2)
-        table.addChild(new createjs.Shape(new createjs.Graphics().beginStroke("rgb(111,111,111)").moveTo(860, 10).lineTo(860, canvas.height - 10)))
+        table.addChild(new Shape(new Graphics().beginStroke("rgb(111,111,111)").moveTo(860, 10).lineTo(860, canvas.height - 10)))
 
         trashBmp = new createjs.Bitmap("trash.png")
         trashBmp.regX = cardWidth / 2 #
@@ -266,16 +346,22 @@ init = (canvas) ->
 
         console.log(deckBmp)
         
-        deckBmp.addEventListener("mousedown", (evt) ->
-                console.log(evt)
-                drawCard()
+        setClickListeners(deckBmp, ((evt) -> drawCard()), (evt) ->
+                showContextMenu(evt.stageX + 3, evt.stageY + 3, ["Draw", "Search", "Scry 1"], (i) ->
+                        if i == 0
+                                drawCard()
+                        if i == 1
+                                showDeck()
+                        if i == 2
+                                alert("Scry 1!")
+                )
         )
         table.addChild(deckBmp)
 
         button1 = new createjs.Text("Search deck (s)", "bold 24px Arial", "black")
         button1.x = 870
         button1.y = 770
-        button1.hitArea = new createjs.Shape(new createjs.Graphics().beginFill("rgba(255,0,0,100)").rect(0,0,200,50))
+        button1.hitArea = new Shape(new Graphics().beginFill("rgba(255,0,0,100)").rect(0,0,200,50))
         button1.on("pressup", (evt) ->
                 showDeck()
         )
@@ -283,7 +369,7 @@ init = (canvas) ->
         button2 = new createjs.Text("Untap (f)", "bold 24px Arial", "black")
         button2.x = 870
         button2.y = 720
-        button2.hitArea = new createjs.Shape(new createjs.Graphics().beginFill("rgba(255,0,0,100)").rect(0,0,200,50))
+        button2.hitArea = new Shape(new Graphics().beginFill("rgba(255,0,0,100)").rect(0,0,200,50))
         button2.on("pressup", (evt) ->
                 untapAll()
         )
@@ -291,7 +377,7 @@ init = (canvas) ->
         button3 = new createjs.Text("Draw (d)", "bold 24px Arial", "black")
         button3.x = 870
         button3.y = 670
-        button3.hitArea = new createjs.Shape(new createjs.Graphics().beginFill("rgba(255,0,0,100)").rect(0,0,200,50))
+        button3.hitArea = new Shape(new Graphics().beginFill("rgba(255,0,0,100)").rect(0,0,200,50))
         button3.on("pressup", (evt) ->
                 drawCard()
         )
@@ -322,4 +408,6 @@ window.addEventListener("load", ->
         ctx = canvas.getContext("2d")
 
         init(canvas)
+
+        window.scrollBy(0, 1000)
 , false)
