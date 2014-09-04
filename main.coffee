@@ -202,7 +202,6 @@ addCardToField = (bmp) ->
                 @y = evt.stageY + @offset.y
         )
         table.addChild(bmp)
-        
 
 drawCard = ->
         if deck.length == 0
@@ -271,7 +270,7 @@ showDeck = ->
                         @y = evt.stageY + @offset.y
                 )
                 bmp.on("pressup", (evt) ->
-                        if @x < 0 or @y < 0 or @x > w or @y > h
+                        if @x < 0 or @y < 0 or @x + cardWidth > w or @y + cardHeight > h
                                 @parent.removeChild(@)
                                 if deck.indexOf(@card) != -1
                                         deck.splice(deck.indexOf(@card), 1)
@@ -292,6 +291,35 @@ showDeck = ->
                         stage.removeChild(layer)
         )
         stage.addChild(layer)
+
+scry1 = ->
+        card = deck.pop()
+        c = new Container()
+        c.x = 90
+        c.y = 470
+        balloon = new createjs.Bitmap("balloon.png")
+        c.addChild(balloon)
+        bmp = new createjs.Bitmap(getCardImage(card))
+        bmp.x = 21
+        bmp.y = 10
+        c.addChild(bmp)
+        btn_top = new createjs.Bitmap("button_top.png")
+        btn_top.x = 28
+        btn_top.y = 125
+        btn_top.on("mousedown", (evt) ->
+                stage.removeChild(c)
+                deck.push(card)
+        )
+        c.addChild(btn_top)
+        btn_bottom = new createjs.Bitmap("button_bottom.png")
+        btn_bottom.x = 10
+        btn_bottom.y = 162
+        btn_bottom.on("mousedown", (evt) ->
+                stage.removeChild(c)
+                deck.unshift(card)
+        )
+        c.addChild(btn_bottom)
+        stage.addChild(c)
 
 untapAll = ->
         for o in table.children
@@ -353,7 +381,7 @@ init = (canvas) ->
                         if i == 1
                                 showDeck()
                         if i == 2
-                                alert("Scry 1!")
+                                scry1()
                 )
         )
         table.addChild(deckBmp)
