@@ -1,0 +1,41 @@
+THS/22Boar
+THS/10Elemental
+THS/33Golem
+THS/21Cleric
+THS/22Satyr
+THS/11Harpy
+THS/11Soldier
+THS/11Soldier_2
+THS/11Soldier_3
+THS/Emblem Elspeth, Sun's Champion
+BNG/11Bird
+BNG/11Cat Soldier
+BNG/11Soldier
+BNG/22Bird
+BNG/99Kraken
+BNG/22Zombie
+BNG/31Elemental
+BNG/33Centaur
+BNG/22Wolf
+BNG/Gold
+BNG/Emblem Kiora, the Crashing Wave
+JOU/11Snake
+JOU/13Spider
+JOU/23Minotaur
+JOU/44Sphinx
+JOU/__Zombie
+JOU/__Hydra
+M15/11Goblin
+M15/11Sliver
+M15/11Spirit
+M15/22Dragon
+M15/33Beast
+M15/Emblem Ajani, Steadfast
+M15/Land Mine
+M15/11Insect
+M15/11Soldier
+M15/11Squid
+M15/22Zombie
+M15/33Beast_2
+M15/Emblem Garruk, Apex Predator
+M15/__Treefolk Warrior

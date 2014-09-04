@@ -16,6 +16,7 @@ getImage = (str) ->
                 return imgPool[str]
         img = new Image()
         img.src = str
+        img.onerror = -> img.src = "cardback.jpg"
         imgPool[str] = img
         return img
 
@@ -50,43 +51,35 @@ parseMWDeck = (str) ->
         return deck
 
 mwdeck = """
-// Deck file for Magic Workstation (http://www.magicworkstation.com)
+4 [JOU] Mana Confluence
+4 [JOU] Temple of Malady
+4 [BNG] Temple of Plenty
+4 [THS] Temple of Silence
+4 [M15] Forest (1)
+3 [M15] Swamp (1)
+2 [M15] Plains (1)
+4 [THS] Sylvan Caryatid
+4 [THS] Fleecemane Lion
+4 [BNG] Brimaz, King of Oreskos
+4 [BNG] Courser of Kruphix
+2 [THS] Polukranos, World Eater
+4 [THS] Hero's Downfall
+3 [THS] Thoughtseize
+1 [JOU] Banishing Light
+4 [JOU] Silence the Believers
+1 [THS] Read the Bones
+4 [THS] Elspeth, Sun's Champion
 
-// Lands
-    1 [THS] Unknown Shores
-    3 [THS] Plains (1)
-    11 [THS] Forest (1)
-    1 [THS] Nykthos, Shrine to Nyx
-
-// Creatures
-    1 [THS] Opaline Unicorn
-    2 [THS] Staunch-Hearted Warrior
-    1 [THS] Sylvan Caryatid
-    2 [THS] Nylea's Disciple
-    2 [THS] Voyaging Satyr
-    2 [THS] Vulpine Goliath
-    1 [THS] Centaur Battlemaster
-    1 [THS] Chronicler of Heroes
-    1 [THS] Fleecemane Lion
-    1 [THS] Leafcrown Dryad
-    2 [THS] Nessian Asp
-    1 [THS] Nessian Courser
-
-// Spells
-    1 [THS] Time to Feed
-    1 [THS] Savage Surge
-    1 [THS] Traveler's Amulet
-    1 [THS] Dauntless Onslaught
-    1 [THS] Divine Verdict
-    2 [THS] Feral Invocation
-
-// Sideboard
-SB: 1 [THS] Nylea's Presence
-SB: 2 [THS] Shredding Winds
-SB: 1 [THS] Fade into Antiquity
-SB: 2 [THS] Commune with the Gods
-SB: 1 [THS] Defend the Hearth
-SB: 1 [THS] Hunt the Hunter
+SB: 2 [THS] Glare of Heresy
+SB: 2 [JOU] Deicide
+SB: 1 [THS] Gods Willing
+SB: 2 [THS] Boon Satyr
+SB: 2 [THS] Arbor Colossus
+SB: 2 [BNG] Drown in Sorrow
+SB: 1 [THS] Read the Bones
+SB: 1 [THS] Thoughtseize
+SB: 1 [JOU] Feast of Dreams
+SB: 1 [BNG] Bile Blight
 """
 
 shuffle = (deck) ->
@@ -99,6 +92,7 @@ shuffle = (deck) ->
 
 stage = null
 deck = null
+tokenList = []
 table = null
 contextMenu = null
 
@@ -182,25 +176,45 @@ showContextMenu = (x, y, menuList, onClickListener) ->
         stage.addChild(dummy)
         stage.addChild(contextMenu)
 
-addCardToField = (bmp) ->
-        bmp.on("pressup", (evt) ->
-                if Math.sqrt(Math.pow(@dragStart.x - evt.stageX, 2) + Math.pow(@dragStart.y - evt.stageY, 2)) < 3
-                        console.log(evt)
-                        @rotation = (@rotation + 90) % 180
+counterImageFile = (n) ->
+        "counter/icon_number02_orange14_" + ("0"+n).slice(-2) + ".gif"
+        
+makeCounter = (n) ->
+        bmp = new createjs.Bitmap(getImage(counterImageFile(n)))
+        bmp.count = n
+        bmp.incr = -> bmp.image = getImage(counterImageFile(++bmp.count))
+        bmp.decr = -> bmp.image = getImage(counterImageFile(--bmp.count))
+        setClickListeners(bmp, ((evt) -> bmp.incr()), (evt) ->
+                if bmp.count == 1
+                        bmp.parent.removeChild(bmp)
+                else
+                        bmp.decr()
         )
-        bmp.on("mousedown", (evt) ->
-                @parent.addChild(@)
-                @offset =
-                        x: @x - evt.stageX
-                        y: @y - evt.stageY
-                @dragStart =
+        return bmp
+
+enableDrag = (target, onClick) ->
+        target.on("pressup", (evt) ->
+                if Math.sqrt(Math.pow(@dragStart.x - evt.stageX, 2) + Math.pow(@dragStart.y - evt.stageY, 2)) < 3
+                        onClick.call(target, evt))
+
+        target.addEventListener("mousedown", (evt) ->
+                if not target.parent?
+                        return
+                target.parent.addChild(target)
+                target.offset =
+                        x: target.x - evt.stageX
+                        y: target.y - evt.stageY
+                target.dragStart =
                         x: evt.stageX
                         y: evt.stageY
         )
-        bmp.on("pressmove", (evt) ->
+        target.on("pressmove", (evt) ->
                 @x = evt.stageX + @offset.x
                 @y = evt.stageY + @offset.y
         )
+
+addCardToField = (bmp) ->
+        enableDrag(bmp, (evt) -> @rotation = (@rotation + 90) % 180)
         table.addChild(bmp)
 
 drawCard = ->
@@ -292,6 +306,67 @@ showDeck = ->
         )
         stage.addChild(layer)
 
+showToken = ->
+        margin = 80
+        padding = 30
+        w = canvas.width - margin * 2
+        h = canvas.height - margin * 2
+        layer = new createjs.Container()
+        layer.x = margin
+        layer.y = margin
+        
+        box = new Shape(new Graphics().beginFill("rgb(188,188,188)").rect(0, 0, w, h))
+        box.shadow = new createjs.Shadow("black", 5, 5, 10)
+        layer.addChild(box)
+        
+        layer.addChild(new Shape(new Graphics().beginFill("rgb(128,128,128)").rect(0, 0, w, 30)))
+        layer.addChild(new Shape(new Graphics().setStrokeStyle(6).beginStroke("rgb(64,64,64)").moveTo(w-20, 5).lineTo(w-5, 20)))
+        layer.addChild(new Shape(new Graphics().setStrokeStyle(6).beginStroke("rgb(64,64,64)").moveTo(w-20, 20).lineTo(w-5, 5)))
+
+        row = ~~((w - padding - cardWidth) / cardWidth) #
+        num_row = ~~(tokenList.length / row) + 1 #
+        step = ~~((h - padding * 2 - cardHeight) / num_row) #
+        console.log("row:", row)
+        console.log("num_row:", num_row)
+        for card, i in tokenList
+                for j in [0...10]
+                        x = padding + ~~(i / num_row) * cardWidth #
+                        y = padding * 2 + step * (i % num_row)
+                        bmp = new createjs.Bitmap(getCardImage(card))
+                        bmp.x = x
+                        bmp.y = y
+                        bmp.card = card
+                        bmp.on("mousedown", (evt) ->
+                                @parent.addChild(@)
+                                @offset =
+                                        x: @x - evt.stageX
+                                        y: @y - evt.stageY
+                        )
+                        bmp.on("pressmove", (evt) ->
+                                @x = evt.stageX + @offset.x
+                                @y = evt.stageY + @offset.y
+                        )
+                        bmp.on("pressup", (evt) ->
+                                if @x < 0 or @y < 0 or @x + cardWidth > w or @y + cardHeight > h
+                                        @parent.removeChild(@)
+                                        bmp = new createjs.Bitmap(getCardImage(@card))
+                                        bmp.regX = cardWidth / 2 #
+                                        bmp.regY = cardHeight / 2 #
+                                        bmp.x = @x + margin + bmp.regX
+                                        bmp.y = @y + margin + bmp.regY
+                                        addCardToField(bmp)
+                        )
+                        layer.addChild(bmp)
+
+        layer.on("pressup", (evt) ->
+                console.log(evt)
+                console.log(evt.x)
+                console.log(evt.y)
+                if evt.localX > w - 20 && evt.localY < 20
+                        stage.removeChild(layer)
+        )
+        stage.addChild(layer)
+
 scry1 = ->
         card = deck.pop()
         c = new Container()
@@ -339,9 +414,22 @@ init = (canvas) ->
         createjs.Touch.enable(stage)
 
         table = new createjs.Container()
+        tableAbove = new createjs.Container()
         stage.addChild(table)
+        stage.addChild(tableAbove)
 
-        table.addChild(new Shape(new Graphics().beginFill("rgb(222,222,222)").rect(0, 0, canvas.width, canvas.height)))
+        tableBg = new Shape(new Graphics().beginFill("rgb(222,222,222)").rect(0, 0, canvas.width, canvas.height))
+        setClickListeners(tableBg, ((evt) -> return), (evt) -> showContextMenu(evt.localX, evt.localY, ["counter", "token"], (i) ->
+                if i == 0
+                        counter = makeCounter(1)
+                        counter.x = evt.localX
+                        counter.y = evt.localY
+                        enableDrag(counter, (evt) -> return)
+                        tableAbove.addChild(counter)
+                else if i == 1
+                        showToken()
+        ))
+        table.addChild(tableBg)
         handBorder1 = new Shape(new Graphics().beginStroke("rgb(111,111,111)").moveTo(10, 140).lineTo(850, 140))
         handBorder1.shadow = new createjs.Shadow("black",1,5,5) 
         table.addChild(handBorder1)
@@ -426,6 +514,8 @@ init = (canvas) ->
 
         createjs.Ticker.addEventListener("tick", tick)
         createjs.Ticker.setFPS(60)
+
+        $.get("token.txt").done((result) -> tokenList = result.trim().split("\n"))
 
 tick = (event) ->
         stage.update(event)
