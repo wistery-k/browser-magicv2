@@ -95,12 +95,12 @@ deck = null
 tokenList = []
 table = null
 contextMenu = null
+revealTopDeck = false
+deckBmp = null
 
-randomColor = ->
-        r = ~~(Math.random() * 256)
-        g = ~~(Math.random() * 256)
-        b = ~~(Math.random() * 256)
-        return "rgb(#{r},#{g},#{b})"
+onTopDeckChanged = ->
+        if revealTopDeck
+                deckBmp.image = getCardImage(deck[deck.length - 1])
 
 setClickListeners = (target, onClick, onRightClick) ->
         if not createjs.Touch.isSupported()
@@ -229,20 +229,13 @@ drawCard = ->
                 if elem.y > 660 and elem.x + cardWidth + 10 > cardDrawX and elem.x < 830
                         cardDrawX = elem.x + cardWidth + 10
         
-        bmp =
-                if !NO_INTERNET
-                        img = getCardImage(card)
-                        console.log(img)
-                        bmp = new createjs.Bitmap(img)
-                        bmp
-                else
-                        new Shape(new Graphics().beginFill(randomColor()).rect(0, 0, cardWidth, cardHeight))
-
+        bmp = new createjs.Bitmap(getCardImage(card))
         bmp.regX = cardWidth / 2 #
         bmp.regY = cardHeight / 2 #
         bmp.x = cardDrawX
         bmp.y = 670 + bmp.regY
         addCardToField(bmp)
+        onTopDeckChanged()
 
 showDeck = ->
         margin = 80
@@ -368,7 +361,7 @@ showToken = ->
         stage.addChild(layer)
 
 scry1 = ->
-        card = deck.pop()
+        card = deck[deck.length - 1]
         c = new Container()
         c.x = 90
         c.y = 470
@@ -381,19 +374,68 @@ scry1 = ->
         btn_top = new createjs.Bitmap("button_top.png")
         btn_top.x = 28
         btn_top.y = 125
-        btn_top.on("mousedown", (evt) ->
-                stage.removeChild(c)
-                deck.push(card)
-        )
+        btn_top.on("mousedown", (evt) -> stage.removeChild(c))
         c.addChild(btn_top)
         btn_bottom = new createjs.Bitmap("button_bottom.png")
         btn_bottom.x = 10
         btn_bottom.y = 162
         btn_bottom.on("mousedown", (evt) ->
                 stage.removeChild(c)
+                deck.pop()
                 deck.unshift(card)
+                onTopDeckChanged()
         )
         c.addChild(btn_bottom)
+        stage.addChild(c)
+
+scry2 = ->
+        len = deck.length
+        card = [deck[len - 1], deck[len - 2]]
+        c = new Container()
+        c.x = 90
+        c.y = 470
+        balloon = new createjs.Bitmap("balloon2.png")
+        c.addChild(balloon)
+        c.ans = []
+        c.finalize = ->
+                tmp = []
+                for i in [0..1]
+                        tmp.push(deck.pop())
+                for i in [0..1]
+                        if @ans[i][1] == false
+                                deck.unshift(tmp[@ans[i][0]])
+                        else
+                                deck.push(tmp[@ans[i][0]])
+                stage.removeChild(c)
+                onTopDeckChanged()
+                
+        for i in [0..1]
+                cc = new Container()
+                c.addChild(cc)
+                bmp = new createjs.Bitmap(getCardImage(card[i]))
+                bmp.x = 33 + 110 * i
+                bmp.y = 10
+                cc.addChild(bmp)                        
+                btn_top = new createjs.Bitmap("button_top.png")
+                btn_top.x = 40 + 110 * i
+                btn_top.y = 125
+                btn_top.on("mousedown", do (i) -> do (cc) -> (evt) ->
+                        c.ans.push([i, true])
+                        c.removeChild(cc)
+                        if c.ans.length == 2
+                                c.finalize()
+                )
+                cc.addChild(btn_top)
+                btn_bottom = new createjs.Bitmap("button_bottom.png")
+                btn_bottom.x = 22 + 110 * i
+                btn_bottom.y = 162
+                btn_bottom.on("mousedown", do (i) -> do (cc) -> (evt) ->
+                        c.ans.push([i, false])
+                        c.removeChild(cc)
+                        if c.ans.length == 2
+                                c.finalize()
+                )
+                cc.addChild(btn_bottom)
         stage.addChild(c)
 
 untapAll = ->
@@ -463,13 +505,22 @@ init = (canvas) ->
         console.log(deckBmp)
         
         setClickListeners(deckBmp, ((evt) -> drawCard()), (evt) ->
-                showContextMenu(evt.stageX + 3, evt.stageY + 3, ["Draw", "Search", "Scry 1"], (i) ->
+                showContextMenu(evt.stageX + 3, evt.stageY - 50, ["Draw", "Search", "Scry 1", "Scry 2", (if revealTopDeck then "Hide top" else "Reveal top")], (i) ->
                         if i == 0
                                 drawCard()
                         if i == 1
                                 showDeck()
                         if i == 2
                                 scry1()
+                        if i == 3
+                                scry2()
+                        if i == 4
+                                if revealTopDeck
+                                        revealTopDeck = false
+                                        deckBmp.image = getImage("cardback.jpg")
+                                else
+                                        revealTopDeck = true
+                                        onTopDeckChanged()
                 )
         )
         table.addChild(deckBmp)
